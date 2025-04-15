@@ -8,25 +8,30 @@ import kotlinx.coroutines.withContext
 import java.io.IOException
 
 class CityRepositoryImpl(val cityService: CityService): CityRepository {
-
-    val cityCache = mutableListOf<City>()
+    private val cityCache = mutableListOf<City>()
+    private var isInitialized = false
 
     override suspend fun getCities(page: Int, pageSize: Int): List<City> {
         return withContext(Dispatchers.IO) {
-            if (cityCache.isEmpty()) {
-                try {
-                    val allCities = cityService.getCities()
-                    cityCache.addAll(allCities)
-                } catch (e: IOException) {
-                    println("Error al obtener las ciudades: ${e.message}")
-                    return@withContext emptyList<City>()
-                } catch (e: Exception) {
-                    println("Error : ${e.message}")
-                    return@withContext emptyList<City>()
+            try {
+                if (!isInitialized) {
+                    cityCache.clear()
+                    cityCache.addAll(cityService.getCities())
+                    isInitialized = true
                 }
+                cityCache.drop(page * pageSize).take(pageSize)
+            } catch (e: IOException) {
+                println("Error al obtener las ciudades: ${e.message}")
+                emptyList()
+            } catch (e: Exception) {
+                println("Error : ${e.message}")
+                emptyList()
             }
-            cityCache.drop(page * pageSize).take(pageSize)
         }
     }
 
+    override fun resetCache() {
+        isInitialized = false
+        cityCache.clear()
+    }
 }

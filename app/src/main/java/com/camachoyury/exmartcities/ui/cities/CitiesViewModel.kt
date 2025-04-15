@@ -22,22 +22,31 @@ class CitiesViewModel(private val repository: CityRepository) : ViewModel() {
     private val _error = MutableStateFlow("")
     val error: StateFlow<String> = _error
 
+    private val _hasMore = MutableStateFlow(true)
+    val hasMore: StateFlow<Boolean> = _hasMore
+
     private var currentPage = 0
-    private val pageSize = 8
+    private val pageSize = 20
 
     init {
         fetchCities()
     }
 
     fun fetchCities() {
+        if (!_hasMore.value || _loading.value) return
+        
         viewModelScope.launch {
             _loading.value = true
             try {
                 val newCities = repository.getCities(currentPage, pageSize)
-                _cities.value += newCities
-                _filteredCities.value = _cities.value
-                _error.value = ""
-                currentPage++
+                if (newCities.isEmpty()) {
+                    _hasMore.value = false
+                } else {
+                    _cities.value = _cities.value + newCities
+                    _filteredCities.value = _cities.value
+                    _error.value = ""
+                    currentPage++
+                }
             } catch (e: Exception) {
                 _error.value = e.message ?: "Unknown error"
             } finally {
@@ -54,5 +63,14 @@ class CitiesViewModel(private val repository: CityRepository) : ViewModel() {
                 _cities.value.filter { it.name.startsWith(query, ignoreCase = true) }
             }
         }
+    }
+
+    fun resetPagination() {
+        currentPage = 0
+        _cities.value = emptyList()
+        _filteredCities.value = emptyList()
+        _hasMore.value = true
+        repository.resetCache()
+        fetchCities()
     }
 }

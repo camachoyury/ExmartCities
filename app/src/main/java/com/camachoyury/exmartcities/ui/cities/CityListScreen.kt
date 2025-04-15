@@ -70,7 +70,7 @@ fun CityListScreen(viewModel: CitiesViewModel) {
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
             .distinctUntilChanged()
             .collect { index ->
-                if (index == cities.size - 1 && !isLoadingMore && !loading && searchQuery.isEmpty() ) {
+                if (index == cities.size - 1 && !isLoadingMore && !loading && searchQuery.isEmpty() && viewModel.hasMore.value) {
                     isLoadingMore = true
                     viewModel.fetchCities()
                     isLoadingMore = false
@@ -137,8 +137,7 @@ fun CityListScreen(viewModel: CitiesViewModel) {
                         CityItem(city, viewModel)
                     }
 
-
-                    if (loading) {
+                    if (loading && cities.isEmpty()) {
                         item {
                             Box(
                                 modifier = Modifier
@@ -149,8 +148,21 @@ fun CityListScreen(viewModel: CitiesViewModel) {
                                 CircularProgressIndicator()
                             }
                         }
-
+                    } else if (loading) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
                     }
+
                     if (error.isNotEmpty()) {
                         item {
                             Text(
